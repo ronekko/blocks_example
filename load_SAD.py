@@ -9,7 +9,7 @@ import os
 from StringIO import StringIO
 import numpy as np
 
-def load_SAD(which_set='train'):
+def load_SAD(which_set='train', shuffle=False, seed=None):
     DATASET_ROOT_PATH = os.environ['DATA_PATH']
     dataset_name = 'SAD'
     data_file = dict(
@@ -31,6 +31,16 @@ def load_SAD(which_set='train'):
         for i in range(10):
             target_list = target_list + [i] * (data_len / 10)
         target = np.array(target_list).reshape(data_len, 1)
+
+        if shuffle:
+            # zip -> shuffle -> unzip
+            list_of_pair = list(zip(data, target))
+            random_state = np.random.RandomState(seed)
+            random_state.shuffle(list_of_pair)
+            data, target = zip(*list_of_pair)
+            data = list(data)
+            target = np.array(target)
+
         return dict(
             data = data,
             target = target

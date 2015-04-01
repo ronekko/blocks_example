@@ -2,3 +2,5 @@
 *.bak
 *.dir
 *.dat
+*.npy
+*.hdf5

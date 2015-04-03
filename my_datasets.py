@@ -6,8 +6,10 @@ Created on Tue Mar 31 22:59:56 2015
 """
 
 import os
+import math
 from collections import OrderedDict
 from StringIO import StringIO
+import cv2
 import numpy as np
 import theano
 from fuel import config
@@ -99,6 +101,53 @@ class SADDataset(IndexableDataset):
 
         return OrderedDict((("features", data), ("targets", targets)))
 
+
+class SimpleMovieDataset(IndexableDataset):
+    def __init__(self, num_examples=1000, image_size=(40, 40), noise_std=0.2):
+        data = SimpleMovieDataset.generate_movie_data(num_examples,
+                                                      image_size, noise_std)
+        indexables = OrderedDict((('features', data['movies']),
+                                  ('targets', data['targets'])))
+        super(SimpleMovieDataset, self).__init__(indexables)
+
+    @staticmethod
+    def generate_movie_data(num_examples=100, image_size=(40, 40),
+                            noise_std=0.2):
+        image_center = np.array(image_size) / 2
+        traj_radius = image_size[0] * 0.2
+        circle_radius = int(math.ceil(image_size[0] * 0.2))
+        blur_ksize = (int(math.floor(image_size[0]/3)),) * 2
+
+        # generate targets
+        lengths = 20 + np.random.poisson(10, num_examples)
+        targets = np.zeros((num_examples, 1), dtype=np.int64)
+        targets[:num_examples/2] = 1
+        np.random.shuffle(targets)
+
+        # generate movies
+        movies = []
+        for k, length in zip(targets, lengths):
+            sign = 1.0 if k else -1.0
+            angle_start = np.random.uniform()
+            theta = sign * 2.0 * np.pi * (
+                    np.linspace(0.0, 1.0, length) + angle_start)
+            points = np.array([np.cos(theta), np.sin(theta)]).T
+            points += np.random.normal(scale=noise_std, size=points.shape)
+            points *= traj_radius
+            points += image_center
+            points = points.astype(np.int)
+            movie = np.empty((length,) + image_size, dtype=floatX)
+            for t, point in enumerate(points):
+                image = np.zeros(image_size, dtype=floatX)
+                cv2.circle(image, tuple(point), circle_radius, 1.0, -1)
+                image = cv2.blur(image, blur_ksize)
+                movie[t] =  image
+            movies.append(np.expand_dims(movie, axis=1))
+
+        return OrderedDict((("movies", np.array(movies)),
+                            ("targets", targets)))
+
+
 if __name__ == '__main__':
     seq = Sequence1dDataset(2200)
     seq_data = seq.get_data(request=slice(0,seq.num_examples))
@@ -130,4 +179,25 @@ if __name__ == '__main__':
     print "sad_data['features'].shape =", sad_data['features'].shape
     print "sad_data['features'][0].shape =", sad_data['features'][0].shape
     print "sad_data['targets'][0].shape =", sad_data['targets'][0].shape
+    print ""
+
+    movie = SimpleMovieDataset(10, (5, 5))
+    movie_data = movie.get_data(request=slice(0, movie.num_examples))
+    print "# SimpleMovieDataset ###"
+    print "type(movie_data) =", type(movie_data)
+    print "len(movie_data) =", len(movie_data)
+    print "type(movie_data[0]) =", type(movie_data[0])
+    print "movie_data[0].shape =", movie_data[0].shape
+    print "movie_data[0][0].shape =", movie_data[0][0].shape
+    print "movie_data[1][0].shape =", movie_data[1][0].shape
+    print ""
+
+    movie_data = SimpleMovieDataset.generate_movie_data(10, (5, 5))
+    print "# SimpleMovieDataset.generate_movie_data ###"
+    print "type(movie_data) =", type(movie_data)
+    print "len(movie_data) =", len(movie_data)
+    print "type(movie_data['movies']) =", type(movie_data['movies'])
+    print "movie_data['movies'].shape =", movie_data['movies'].shape
+    print "movie_data['movies'][0].shape =", movie_data['movies'][0].shape
+    print "movie_data['targets'][0].shape =", movie_data['targets'][0].shape
     print ""

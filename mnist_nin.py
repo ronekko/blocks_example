@@ -83,7 +83,7 @@ cost.name = 'cost'
 cg = ComputationGraph(cost)
 
 # configure dropout
-dropout_bricks = [mlpconv23]
+dropout_bricks = [mlpconv21, mlpconv22, mlpconv23]
 variable_filter = VariableFilter([INPUT], dropout_bricks)
 inputs = variable_filter(cg.variables)
 cg_dropout = apply_dropout(cg, inputs, 0.5)
@@ -96,7 +96,7 @@ weights = VariableFilter([WEIGHT])(cg_dropout.variables)
 
 # setup a training algorithm
 #step_rule = Adam(0.01)
-step_rule = RMSProp(0.002)
+step_rule = RMSProp(0.0005)
 # step_rule = Momentum(learning_rate=0.001, momentum=0.9)
 algorithm = GradientDescent(cost=cost_dropout,
                             params=cg.parameters,
@@ -121,7 +121,7 @@ monitor_train = TrainingDataMonitoring([cost, cost_misclass],
 monitor_test = DataStreamMonitoring(variables=[cost, cost_misclass],
                                     data_stream=data_stream_test,
                                     prefix='test')
-plotting = Plot('MNIST NIN Dropout',
+plotting = Plot('MNIST NIN Dropout3-RMSProp00005',
                 channels=[['train_cost', 'test_cost'],
                           ['train_cost_missclass', 'test_cost_missclass']])
 

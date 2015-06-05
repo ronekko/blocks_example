@@ -68,8 +68,8 @@ cg = ComputationGraph(cost)
 # configure dropout
 variable_filter = VariableFilter([INPUT], [linear1, linear2])
 inputs = variable_filter(cg.variables)
-cg = apply_dropout(cg, inputs, 0.5)
-cost = cg.outputs[0]
+cg_dropout = apply_dropout(cg, inputs, 0.5)
+cost_dropout = cg_dropout.outputs[0]
 
 # L2 regularization
 weights = VariableFilter([WEIGHT])(cg.variables)
@@ -79,7 +79,7 @@ weights = VariableFilter([WEIGHT])(cg.variables)
 # setup a training algorithm
 step_rule = Adam()
 # step_rule = Momentum(learning_rate=0.001, momentum=0.9)
-algorithm = GradientDescent(cost=cost,
+algorithm = GradientDescent(cost=cost_dropout,
                             params=cg.parameters,
                             step_rule=step_rule)
 

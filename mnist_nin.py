@@ -78,26 +78,26 @@ y = tt.lmatrix('targets')
 cost_misclass = MisclassificationRate().apply(y.flatten(), y_hat)
 cost_misclass.name = 'cost_missclass'
 cost = CategoricalCrossEntropy().apply(y.flatten(), y_hat)
-cost.name = 'cost_without_regularization'
+cost.name = 'cost'
 cg = ComputationGraph(cost)
 
 # configure dropout
 dropout_bricks = [mlpconv23]
 variable_filter = VariableFilter([INPUT], dropout_bricks)
 inputs = variable_filter(cg.variables)
-cg = apply_dropout(cg, inputs, 0.5)
-cost = cg.outputs[0]
+cg_dropout = apply_dropout(cg, inputs, 0.5)
+cost_dropout = cg_dropout.outputs[0]
 
 # L2 regularization
-weights = VariableFilter([WEIGHT])(cg.variables)
+weights = VariableFilter([WEIGHT])(cg_dropout.variables)
 # cost += 0.00001 * sum([(W ** 2).sum() for W in weights])
 # cost.name = 'cost_with_regularization'
 
 # setup a training algorithm
 #step_rule = Adam(0.01)
-step_rule = RMSProp(0.01)
+step_rule = RMSProp(0.002)
 # step_rule = Momentum(learning_rate=0.001, momentum=0.9)
-algorithm = GradientDescent(cost=cost,
+algorithm = GradientDescent(cost=cost_dropout,
                             params=cg.parameters,
                             step_rule=step_rule)
 

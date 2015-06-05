@@ -26,6 +26,7 @@ from blocks.extensions.monitoring import (
 )
 from blocks.main_loop import MainLoop
 from blocks.extensions import FinishAfter, Printing, Timing
+from blocks.extensions.plot import Plot
 
 # construct a ConvNet with 2 conv+maxpool+ReLU components and softmax
 x = tt.tensor4('features')
@@ -62,7 +63,7 @@ y = tt.lmatrix('targets')
 cost_misclass = MisclassificationRate().apply(y.flatten(), y_hat)
 cost_misclass.name = 'cost_missclass'
 cost = CategoricalCrossEntropy().apply(y.flatten(), y_hat)
-cost.name = 'cost_without_regularization'
+cost.name = 'cost'
 cg = ComputationGraph(cost)
 
 # configure dropout
@@ -102,12 +103,15 @@ monitor_train = TrainingDataMonitoring([cost, cost_misclass],
 monitor_test = DataStreamMonitoring(variables=[cost, cost_misclass],
                                     data_stream=data_stream_test,
                                     prefix='test')
+plotting = Plot('MNIST CNN Dropout',
+                channels=[['train_cost', 'test_cost'],
+                          ['train_cost_missclass', 'test_cost_missclass']])
 
 main_loop = MainLoop(data_stream=data_stream,
                      algorithm=algorithm,
                      extensions=[monitor_train, monitor_test,
                                  FinishAfter(after_n_epochs=500),
-                                 Timing(), Printing()]
+                                 plotting, Timing(), Printing()]
                     )
 main_loop.run()
 

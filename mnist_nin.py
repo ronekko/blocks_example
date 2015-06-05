@@ -28,6 +28,7 @@ from blocks.extensions.monitoring import (
 )
 from blocks.main_loop import MainLoop
 from blocks.extensions import FinishAfter, Printing, Timing
+from blocks.extensions.plot import Plot
 
 # construct a ConvNet with 2 conv+maxpool+ReLU components and softmax
 x = tt.tensor4('features')
@@ -120,12 +121,15 @@ monitor_train = TrainingDataMonitoring([cost, cost_misclass],
 monitor_test = DataStreamMonitoring(variables=[cost, cost_misclass],
                                     data_stream=data_stream_test,
                                     prefix='test')
+plotting = Plot('MNIST NIN Dropout',
+                channels=[['train_cost', 'test_cost'],
+                          ['train_cost_missclass', 'test_cost_missclass']])
 
 main_loop = MainLoop(data_stream=data_stream,
                      algorithm=algorithm,
                      extensions=[monitor_train, monitor_test,
                                  FinishAfter(after_n_epochs=250),
-                                 Timing(), Printing()]
+                                 plotting, Timing(), Printing()]
                     )
 main_loop.run()
 

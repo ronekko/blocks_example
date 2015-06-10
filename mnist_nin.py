@@ -29,6 +29,7 @@ from blocks.extensions.monitoring import (
 from blocks.main_loop import MainLoop
 from blocks.extensions import FinishAfter, Printing, Timing
 from blocks.extensions.plot import Plot
+from bokeh.models import Range1d
 
 # construct a ConvNet with 2 conv+maxpool+ReLU components and softmax
 x = tt.tensor4('features')
@@ -42,7 +43,7 @@ mlpconv12 = ConvolutionalActivation(activation=activation, filter_size=(1, 1),
                                     weights_init=IsotropicGaussian(0.1),
                                     biases_init=Constant(0), name='mlpconv12')
 mlpconv13 = ConvolutionalLayer(activation=activation, filter_size=(1, 1),
-                               num_filters=80, pooling_size=(2, 2),
+                               num_filters=50, pooling_size=(2, 2),
                                weights_init=IsotropicGaussian(0.01),
                                biases_init=Constant(0), name='mlpconv13')
 
@@ -83,7 +84,7 @@ cost.name = 'cost'
 cg = ComputationGraph(cost)
 
 # configure dropout
-dropout_bricks = [mlpconv21, mlpconv22, mlpconv23]
+dropout_bricks = [mlpconv12, mlpconv13, mlpconv21, mlpconv22, mlpconv23]
 variable_filter = VariableFilter([INPUT], dropout_bricks)
 inputs = variable_filter(cg.variables)
 cg_dropout = apply_dropout(cg, inputs, 0.5)
@@ -96,7 +97,7 @@ weights = VariableFilter([WEIGHT])(cg_dropout.variables)
 
 # setup a training algorithm
 #step_rule = Adam(0.01)
-step_rule = RMSProp(0.0005)
+step_rule = RMSProp(0.0002)
 # step_rule = Momentum(learning_rate=0.001, momentum=0.9)
 algorithm = GradientDescent(cost=cost_dropout,
                             params=cg.parameters,
@@ -121,14 +122,18 @@ monitor_train = TrainingDataMonitoring([cost, cost_misclass],
 monitor_test = DataStreamMonitoring(variables=[cost, cost_misclass],
                                     data_stream=data_stream_test,
                                     prefix='test')
-plotting = Plot('MNIST NIN Dropout3-RMSProp00005',
-                channels=[['train_cost', 'test_cost'],
-                          ['train_cost_missclass', 'test_cost_missclass']])
+plotting = Plot('MNIST NIN3 Dropout5-RMSProp000005-10010050-10010050-10',
+                channels=[['train_cost', 'test_cost',
+                           {#'x_range': Range1d(-100, 121000),
+                            'y_range': Range1d(0, 0.1)}],
+                          ['train_cost_missclass', 'test_cost_missclass',
+                           {#'x_range': Range1d(-100, 121000),
+                            'y_range': Range1d(0, 0.02)}]])
 
 main_loop = MainLoop(data_stream=data_stream,
                      algorithm=algorithm,
                      extensions=[monitor_train, monitor_test,
-                                 FinishAfter(after_n_epochs=250),
+                                 FinishAfter(after_n_epochs=300),
                                  plotting, Timing(), Printing()]
                     )
 main_loop.run()
